@@ -1,15 +1,13 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Function to print usage
 usage() {
-    echo "Usage: $0 -d domain -e email [-nocert]"
+    echo "Usage: $0 -d domain [-e email] [-ncb]"
     echo "  -d  --domain-name      Set the domain name for the certificate"
     echo "  -e  --email            Set the email address for certificate registration and renewal notices"
-    echo "  -nocert --no-certificate Skip certificate installation and configuration"
+    echo "  -ncb --no-cert-bot     Skip certbot installation and certificate configuration. Use this option if you have already installed a certificate with Let's Encrypt. Assumes certificate is in /etc/letsencrypt/live/\$domain"
     echo "  -h  --help             Display this help message"
 }
-
-nocert=0
 
 # Parse command-line arguments
 while (( "$#" )); do
@@ -32,8 +30,8 @@ while (( "$#" )); do
                 exit 1
             fi
             ;;
-        -nocert|--no-certificate)
-            nocert=1
+        -ncb|--no-cert-bot)
+            no_cert_bot=true
             shift
             ;;
         -h|--help)
@@ -52,9 +50,9 @@ while (( "$#" )); do
 done
 eval set -- "$PARAMS"
 
-# Check if domain and email are set
-if [ -z "$domain" ] || [ -z "$email" ]; then
-    echo "Error: Both the domain and email are required."
+# Check if domain is set
+if [ -z "$domain" ]; then
+    echo "Error: The domain is required."
     usage
     exit 1
 fi
@@ -89,8 +87,14 @@ sudo nginx -t
 # Reload Nginx
 sudo systemctl reload nginx
 
-# If -nocert flag is not set
-if [ $nocert -eq 0 ]; then
+if [ "$no_cert_bot" != true ] ; then
+    # Check if email is set
+    if [ -z "$email" ]; then
+        echo "Error: The email is required if not using --no-cert-bot."
+        usage
+        exit 1
+    fi
+
     # Install certbot and the Nginx plugin
     sudo apt-get install -y certbot python3-certbot-nginx
 
