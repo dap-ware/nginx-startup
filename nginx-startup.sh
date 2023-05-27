@@ -1,12 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Function to print usage
 usage() {
-    echo "Usage: $0 -d domain -e email"
-    echo "  -d  --domain-name  Set the domain name for the certificate"
-    echo "  -e  --email        Set the email address for certificate registration and renewal notices"
-    echo "  -h  --help         Display this help message"
+    echo "Usage: $0 -d domain -e email [-nocert]"
+    echo "  -d  --domain-name      Set the domain name for the certificate"
+    echo "  -e  --email            Set the email address for certificate registration and renewal notices"
+    echo "  -nocert --no-certificate Skip certificate installation and configuration"
+    echo "  -h  --help             Display this help message"
 }
+
+nocert=0
 
 # Parse command-line arguments
 while (( "$#" )); do
@@ -28,6 +31,10 @@ while (( "$#" )); do
                 echo "Error: Argument for $1 is missing" >&2
                 exit 1
             fi
+            ;;
+        -nocert|--no-certificate)
+            nocert=1
+            shift
             ;;
         -h|--help)
             usage
@@ -82,11 +89,14 @@ sudo nginx -t
 # Reload Nginx
 sudo systemctl reload nginx
 
-# Install certbot and the Nginx plugin
-sudo apt-get install -y certbot python3-certbot-nginx
+# If -nocert flag is not set
+if [ $nocert -eq 0 ]; then
+    # Install certbot and the Nginx plugin
+    sudo apt-get install -y certbot python3-certbot-nginx
 
-# Get the SSL certificate
-sudo certbot --nginx -d $domain -d www.$domain --non-interactive --agree-tos --email $email
+    # Get the SSL certificate
+    sudo certbot --nginx -d $domain -d www.$domain --non-interactive --agree-tos --email $email
 
-# Test certificate renewal
-sudo certbot renew --dry-run
+    # Test certificate renewal
+    sudo certbot renew --dry-run
+fi
